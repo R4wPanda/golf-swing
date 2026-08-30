@@ -18,6 +18,7 @@ final class CameraController: NSObject, ObservableObject {
     private var videoDevice: AVCaptureDevice?
     private var rotationCoordinator: AVCaptureDevice.RotationCoordinator?
     private var rotationObservation: NSKeyValueObservation?
+    private var previewLayer: AVCaptureVideoPreviewLayer?
 
     private static let targetFrameRate = 60.0
 
@@ -43,12 +44,12 @@ final class CameraController: NSObject, ObservableObject {
 
     private func configureSession() {
         session.beginConfiguration()
-        defer { session.commitConfiguration() }
         session.sessionPreset = .high
 
         guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
               let input = try? AVCaptureDeviceInput(device: device),
               session.canAddInput(input) else {
+            session.commitConfiguration()
             DispatchQueue.main.async { self.setupError = "Unable to access the back camera." }
             return
         }
@@ -56,13 +57,21 @@ final class CameraController: NSObject, ObservableObject {
         videoDevice = device
 
         guard session.canAddOutput(movieOutput) else {
+            session.commitConfiguration()
             DispatchQueue.main.async { self.setupError = "Unable to configure video output." }
             return
         }
         session.addOutput(movieOutput)
 
         configureFrameRate(for: device)
+
+        // startRunning() must not be called until the configuration block is
+        // committed — calling it while still "open" leaves the session in an
+        // inconsistent state that crashes shortly after the first frame.
+        session.commitConfiguration()
         session.startRunning()
+
+        DispatchQueue.main.async { self.setUpRotationCoordinatorIfNeeded() }
     }
 
     private func configureFrameRate(for device: AVCaptureDevice) {
@@ -87,22 +96,33 @@ final class CameraController: NSObject, ObservableObject {
         }
     }
 
-    /// Call once per preview presentation; wires up rotation handling for
-    /// whichever landscape orientation the device is currently held in.
+    /// Returns the same preview layer instance on every call (SwiftUI's
+    /// `body` re-evaluates often, and recreating the layer/RotationCoordinator
+    /// on every render is both wasteful and unsafe).
     func makePreviewLayer() -> AVCaptureVideoPreviewLayer {
+        if let previewLayer {
+            return previewLayer
+        }
         let layer = AVCaptureVideoPreviewLayer(session: session)
         layer.videoGravity = .resizeAspectFill
-
-        if let device = videoDevice {
-            let coordinator = AVCaptureDevice.RotationCoordinator(device: device, previewLayer: layer)
-            rotationCoordinator = coordinator
-            applyRotation(angle: coordinator.videoRotationAngleForHorizonLevelPreview, to: layer.connection)
-            rotationObservation = coordinator.observe(\.videoRotationAngleForHorizonLevelPreview, options: [.new]) { [weak self, weak layer] coordinator, _ in
-                guard let layer else { return }
-                self?.applyRotation(angle: coordinator.videoRotationAngleForHorizonLevelPreview, to: layer.connection)
-            }
-        }
+        previewLayer = layer
+        setUpRotationCoordinatorIfNeeded()
         return layer
+    }
+
+    /// Wires up rotation handling once both the preview layer and the video
+    /// device are known; whichever of the two becomes available last is
+    /// responsible for calling this.
+    private func setUpRotationCoordinatorIfNeeded() {
+        guard rotationCoordinator == nil, let device = videoDevice, let layer = previewLayer else { return }
+
+        let coordinator = AVCaptureDevice.RotationCoordinator(device: device, previewLayer: layer)
+        rotationCoordinator = coordinator
+        applyRotation(angle: coordinator.videoRotationAngleForHorizonLevelPreview, to: layer.connection)
+        rotationObservation = coordinator.observe(\.videoRotationAngleForHorizonLevelPreview, options: [.new]) { [weak self, weak layer] coordinator, _ in
+            guard let layer else { return }
+            self?.applyRotation(angle: coordinator.videoRotationAngleForHorizonLevelPreview, to: layer.connection)
+        }
     }
 
     private func applyRotation(angle: CGFloat, to connection: AVCaptureConnection?) {
