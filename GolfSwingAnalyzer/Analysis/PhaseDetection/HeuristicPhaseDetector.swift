@@ -1,4 +1,5 @@
 import CoreGraphics
+import CoreMedia
 import Vision
 
 /// Detects swing phases from wrist height/velocity extrema, averaging both
@@ -50,19 +51,29 @@ struct HeuristicPhaseDetector: SwingPhaseDetecting {
         }
     }
 
+    /// Actual velocity (distance / elapsed time), not raw distance between
+    /// consecutive array entries. Frames with no confidently-detected body
+    /// are dropped from the array entirely (not kept as gaps), so two
+    /// adjacent entries can be seconds apart in real time — treating that
+    /// gap as a single frame step would read a detection dropout as a huge
+    /// speed spike and misplace impact.
     private nonisolated func speeds(from frames: [PoseFrame]) -> [CGFloat?] {
         var result: [CGFloat?] = [nil]
-        var previous = averagedWristPoint(frames[0])
+        var previousPoint = averagedWristPoint(frames[0])
+        var previousTime = frames[0].timestamp
         for frame in frames.dropFirst() {
-            let current = averagedWristPoint(frame)
-            if let current, let previous {
-                let dx = current.x - previous.x
-                let dy = current.y - previous.y
-                result.append((dx * dx + dy * dy).squareRoot())
+            let currentPoint = averagedWristPoint(frame)
+            let currentTime = frame.timestamp
+            let dt = CMTimeGetSeconds(currentTime - previousTime)
+            if let currentPoint, let previousPoint, dt > 0 {
+                let dx = currentPoint.x - previousPoint.x
+                let dy = currentPoint.y - previousPoint.y
+                result.append((dx * dx + dy * dy).squareRoot() / CGFloat(dt))
             } else {
                 result.append(nil)
             }
-            previous = current
+            previousPoint = currentPoint
+            previousTime = currentTime
         }
         return result
     }
