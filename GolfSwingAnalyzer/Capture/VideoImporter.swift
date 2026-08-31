@@ -1,5 +1,6 @@
 import CoreTransferable
 import PhotosUI
+import SwiftUI
 import UniformTypeIdentifiers
 
 /// `PhotosPickerItem` doesn't expose a stable file URL directly — the

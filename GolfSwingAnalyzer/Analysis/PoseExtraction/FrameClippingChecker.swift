@@ -1,6 +1,6 @@
 import CoreGraphics
 
-enum FrameEdge {
+nonisolated enum FrameEdge {
     case top, bottom, left, right
 }
 
@@ -23,8 +23,8 @@ struct ClippingCheckResult {
 /// suggest moving closer when there's unused margin, since that's a
 /// secondary quality nicety rather than something that breaks pose tracking.
 enum FrameClippingChecker {
-    static let edgeMargin: CGFloat = 0.04
-    static let minJointConfidence: Float = 0.3
+    nonisolated static let edgeMargin: CGFloat = 0.04
+    nonisolated static let minJointConfidence: Float = 0.3
 
     nonisolated static func evaluate(frames: [PoseFrame]) -> ClippingCheckResult {
         var clippedEdges: Set<FrameEdge> = []

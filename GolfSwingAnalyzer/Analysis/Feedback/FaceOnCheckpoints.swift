@@ -17,16 +17,16 @@ enum FaceOnCheckpoints {
     ]
 }
 
-private let headSwayThreshold: CGFloat = 0.12 // fraction of address shoulder width; plan estimates 10-15%
+nonisolated private let headSwayThreshold: CGFloat = 0.12 // fraction of address shoulder width; plan estimates 10-15%
 
-private func shoulderWidthAtAddress(_ session: SwingSession) -> CGFloat? {
+nonisolated private func shoulderWidthAtAddress(_ session: SwingSession) -> CGFloat? {
     guard let frame = session.frame(for: .address),
           let left = SwingGeometry.point(.leftShoulder, in: frame),
           let right = SwingGeometry.point(.rightShoulder, in: frame) else { return nil }
     return SwingGeometry.distance(left, right)
 }
 
-private func headSway(in session: SwingSession, at phase: SwingPhase) -> CGFloat? {
+nonisolated private func headSway(in session: SwingSession, at phase: SwingPhase) -> CGFloat? {
     guard let addressFrame = session.frame(for: .address),
           let phaseFrame = session.frame(for: phase),
           let addressHead = SwingGeometry.point(.nose, in: addressFrame),
@@ -35,7 +35,7 @@ private func headSway(in session: SwingSession, at phase: SwingPhase) -> CGFloat
     return abs(phaseHead.x - addressHead.x) / width
 }
 
-private func lineAngle(
+nonisolated private func lineAngle(
     _ a: VNHumanBodyPoseObservation.JointName,
     _ b: VNHumanBodyPoseObservation.JointName,
     in frame: PoseFrame
@@ -44,7 +44,7 @@ private func lineAngle(
     return SwingGeometry.lineAngleDegrees(from: pointA, to: pointB)
 }
 
-private func rotation(
+nonisolated private func rotation(
     _ joints: (VNHumanBodyPoseObservation.JointName, VNHumanBodyPoseObservation.JointName),
     in session: SwingSession,
     at phase: SwingPhase

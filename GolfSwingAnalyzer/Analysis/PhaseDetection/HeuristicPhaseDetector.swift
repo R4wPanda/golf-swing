@@ -7,11 +7,11 @@ import Vision
 /// clean, well-framed swing") — every threshold here is a provisional
 /// starting point to retune against real swings, not a validated value.
 struct HeuristicPhaseDetector: SwingPhaseDetecting {
-    private static let minConfidence: Float = 0.3
+    private nonisolated static let minConfidence: Float = 0.3
     /// Fraction of peak speed that counts as "started moving," for takeaway.
-    private static let takeawaySpeedFraction: CGFloat = 0.1
+    private nonisolated static let takeawaySpeedFraction: CGFloat = 0.1
     /// How far into the clip to search for a stable address position.
-    private static let addressSearchFraction: CGFloat = 0.25
+    private nonisolated static let addressSearchFraction: CGFloat = 0.25
 
     nonisolated func detectPhases(in frames: [PoseFrame]) -> [SwingPhase: Int] {
         guard frames.count > 4 else { return [:] }
@@ -39,7 +39,7 @@ struct HeuristicPhaseDetector: SwingPhaseDetecting {
 
     // MARK: - Signal extraction
 
-    private func averagedWristPoint(_ frame: PoseFrame) -> CGPoint? {
+    private nonisolated func averagedWristPoint(_ frame: PoseFrame) -> CGPoint? {
         let left = frame.joints[.leftWrist].flatMap { $0.confidence >= Self.minConfidence ? $0.point : nil }
         let right = frame.joints[.rightWrist].flatMap { $0.confidence >= Self.minConfidence ? $0.point : nil }
         switch (left, right) {
@@ -50,7 +50,7 @@ struct HeuristicPhaseDetector: SwingPhaseDetecting {
         }
     }
 
-    private func speeds(from frames: [PoseFrame]) -> [CGFloat?] {
+    private nonisolated func speeds(from frames: [PoseFrame]) -> [CGFloat?] {
         var result: [CGFloat?] = [nil]
         var previous = averagedWristPoint(frames[0])
         for frame in frames.dropFirst() {
@@ -69,7 +69,7 @@ struct HeuristicPhaseDetector: SwingPhaseDetecting {
 
     // MARK: - Phase heuristics
 
-    private func detectAddress(speeds: [CGFloat?]) -> Int {
+    private nonisolated func detectAddress(speeds: [CGFloat?]) -> Int {
         let searchEnd = max(1, Int(CGFloat(speeds.count) * Self.addressSearchFraction))
         let peakSpeed = speeds.compactMap { $0 }.max() ?? 0
         let stableThreshold = peakSpeed * 0.05
@@ -79,7 +79,7 @@ struct HeuristicPhaseDetector: SwingPhaseDetecting {
         return 0
     }
 
-    private func detectTakeaway(speeds: [CGFloat?], from start: Int, to end: Int) -> Int? {
+    private nonisolated func detectTakeaway(speeds: [CGFloat?], from start: Int, to end: Int) -> Int? {
         guard start < end else { return nil }
         let peakSpeed = speeds.compactMap { $0 }.max() ?? 0
         let threshold = peakSpeed * Self.takeawaySpeedFraction
@@ -89,7 +89,7 @@ struct HeuristicPhaseDetector: SwingPhaseDetecting {
         return nil
     }
 
-    private func argmax(_ values: [CGFloat?], from start: Int = 0, upTo end: Int? = nil) -> Int? {
+    private nonisolated func argmax(_ values: [CGFloat?], from start: Int = 0, upTo end: Int? = nil) -> Int? {
         let end = end ?? values.count
         guard start >= 0, start < end, end <= values.count else { return nil }
         var bestIndex: Int?

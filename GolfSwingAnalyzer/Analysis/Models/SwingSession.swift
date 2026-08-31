@@ -6,7 +6,7 @@ struct SwingSession {
     var phases: [SwingPhase: Int] = [:]
     var tips: [Tip] = []
 
-    func frame(for phase: SwingPhase) -> PoseFrame? {
+    nonisolated func frame(for phase: SwingPhase) -> PoseFrame? {
         guard let index = phases[phase], frames.indices.contains(index) else { return nil }
         return frames[index]
     }

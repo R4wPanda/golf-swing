@@ -12,7 +12,7 @@ final class VisionPoseExtractor: PoseProviding {
         case readerFailed
     }
 
-    private static let minJointConfidenceForSubjectSelection: Float = 0.3
+    private nonisolated static let minJointConfidenceForSubjectSelection: Float = 0.3
 
     nonisolated func extractPoseFrames(from url: URL) async throws -> [PoseFrame] {
         let asset = AVURLAsset(url: url)
@@ -63,18 +63,18 @@ final class VisionPoseExtractor: PoseProviding {
     /// `VNDetectHumanBodyPoseRequest` can return one observation per detected
     /// person; pick whichever has the most confidently-recognized joints as a
     /// simple proxy for "the actual subject" in the expected single-person shot.
-    private static func primarySubject(in observations: [VNHumanBodyPoseObservation]?) -> VNHumanBodyPoseObservation? {
+    private nonisolated static func primarySubject(in observations: [VNHumanBodyPoseObservation]?) -> VNHumanBodyPoseObservation? {
         observations?.max { lhs, rhs in
             confidentJointCount(lhs) < confidentJointCount(rhs)
         }
     }
 
-    private static func confidentJointCount(_ observation: VNHumanBodyPoseObservation) -> Int {
+    private nonisolated static func confidentJointCount(_ observation: VNHumanBodyPoseObservation) -> Int {
         let points = (try? observation.recognizedPoints(.all)) ?? [:]
         return points.values.filter { $0.confidence >= minJointConfidenceForSubjectSelection }.count
     }
 
-    private static func joints(from observation: VNHumanBodyPoseObservation) -> [VNHumanBodyPoseObservation.JointName: JointSample] {
+    private nonisolated static func joints(from observation: VNHumanBodyPoseObservation) -> [VNHumanBodyPoseObservation.JointName: JointSample] {
         let points = (try? observation.recognizedPoints(.all)) ?? [:]
         return points.mapValues { JointSample(point: $0.location, confidence: $0.confidence) }
     }
