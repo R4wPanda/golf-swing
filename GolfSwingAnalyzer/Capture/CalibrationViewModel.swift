@@ -56,6 +56,7 @@ final class CalibrationViewModel: ObservableObject {
     }
 
     func finishPracticeSwing() {
+        countdown.cancel()
         phase = .analyzing
         cameraController.stopRecording()
     }
