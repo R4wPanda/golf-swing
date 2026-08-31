@@ -22,6 +22,16 @@ final class CameraController: NSObject, ObservableObject {
 
     private static let targetFrameRate = 60.0
 
+    deinit {
+        let session = session
+        let queue = sessionQueue
+        queue.async {
+            if session.isRunning {
+                session.stopRunning()
+            }
+        }
+    }
+
     func requestAccessAndConfigure() {
         switch AVCaptureDevice.authorizationStatus(for: .video) {
         case .authorized:
