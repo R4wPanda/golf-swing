@@ -7,8 +7,12 @@ enum FrameEdge {
 struct ClippingCheckResult {
     let passed: Bool
     let clippedEdges: Set<FrameEdge>
+    let bodyDetected: Bool
 
     var guidanceMessage: String {
+        guard bodyDetected else {
+            return "We couldn't detect you in that clip — make sure you're clearly visible, well-lit, and facing the camera, then try again."
+        }
         guard !passed else { return "Looks good!" }
         if clippedEdges.contains(.top) || clippedEdges.contains(.bottom) {
             return "Part of your swing went above or below the frame. Step back so your full swing — including the club overhead — stays in view."
@@ -27,6 +31,10 @@ enum FrameClippingChecker {
     static let minJointConfidence: Float = 0.3
 
     nonisolated static func evaluate(frames: [PoseFrame]) -> ClippingCheckResult {
+        guard !frames.isEmpty else {
+            return ClippingCheckResult(passed: false, clippedEdges: [], bodyDetected: false)
+        }
+
         var clippedEdges: Set<FrameEdge> = []
 
         for frame in frames {
@@ -38,6 +46,6 @@ enum FrameClippingChecker {
             }
         }
 
-        return ClippingCheckResult(passed: clippedEdges.isEmpty, clippedEdges: clippedEdges)
+        return ClippingCheckResult(passed: clippedEdges.isEmpty, clippedEdges: clippedEdges, bodyDetected: true)
     }
 }

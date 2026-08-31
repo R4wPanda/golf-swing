@@ -17,6 +17,11 @@ final class AnalysisViewModel: ObservableObject {
         Task {
             do {
                 let frames = try await poseExtractor.extractPoseFrames(from: videoURL)
+                guard !frames.isEmpty else {
+                    errorMessage = "Couldn't detect a person in that video — make sure you're clearly visible, well-lit, and facing the camera."
+                    isAnalyzing = false
+                    return
+                }
                 let phases = phaseDetector.detectPhases(in: frames)
                 var newSession = SwingSession(videoURL: videoURL, frames: frames, phases: phases)
                 newSession.tips = feedbackEngine.evaluate(session: newSession)

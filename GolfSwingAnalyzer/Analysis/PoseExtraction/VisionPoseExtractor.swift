@@ -19,7 +19,9 @@ final class VisionPoseExtractor: PoseProviding {
         guard let track = try await asset.loadTracks(withMediaType: .video).first else {
             throw ExtractionError.noVideoTrack
         }
-        let orientation = try await Self.cgOrientation(for: track)
+        let transform = try await track.load(.preferredTransform)
+        let orientation = Self.cgOrientation(for: transform)
+        print("[VisionPoseExtractor] preferredTransform=\(transform) -> orientation=\(orientation)")
 
         let reader = try AVAssetReader(asset: asset)
         let output = AVAssetReaderTrackOutput(
@@ -32,9 +34,11 @@ final class VisionPoseExtractor: PoseProviding {
         }
 
         var frames: [PoseFrame] = []
+        var rawFrameCount = 0
         let requestHandler = VNSequenceRequestHandler()
 
         while let sampleBuffer = output.copyNextSampleBuffer() {
+            rawFrameCount += 1
             try autoreleasepool {
                 guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
                 let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
@@ -47,12 +51,19 @@ final class VisionPoseExtractor: PoseProviding {
             }
         }
 
+        print("[VisionPoseExtractor] read \(rawFrameCount) raw frame(s), detected a body in \(frames.count) of them")
+        if reader.status == .failed {
+            print("[VisionPoseExtractor] reader failed: \(String(describing: reader.error))")
+        }
+
         return frames
     }
 
-    private static func cgOrientation(for track: AVAssetTrack) async throws -> CGImagePropertyOrientation {
-        let transform = try await track.load(.preferredTransform)
-        switch (transform.a, transform.b, transform.c, transform.d) {
+    /// Tolerant of minor floating-point noise in the transform components
+    /// (rounds before comparing) rather than requiring an exact match against
+    /// the four canonical rotation matrices.
+    private static func cgOrientation(for transform: CGAffineTransform) -> CGImagePropertyOrientation {
+        switch (transform.a.rounded(), transform.b.rounded(), transform.c.rounded(), transform.d.rounded()) {
         case (0, 1, -1, 0): return .right
         case (0, -1, 1, 0): return .left
         case (-1, 0, 0, -1): return .down
