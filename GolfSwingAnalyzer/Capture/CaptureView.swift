@@ -18,7 +18,22 @@ struct CaptureView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                         .padding(.top, 24)
                 }
+
+                if let secondsRemaining = viewModel.secondsRemaining {
+                    Spacer()
+                    Text("\(secondsRemaining)")
+                        .font(.system(size: 96, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                        .shadow(radius: 8)
+                }
+
                 Spacer()
+
+                if viewModel.secondsRemaining == nil && !viewModel.isRecording {
+                    durationPicker
+                        .padding(.bottom, 12)
+                }
+
                 recordButton
                     .padding(.bottom, 32)
             }
@@ -42,8 +57,19 @@ struct CaptureView: View {
         )
     }
 
+    private var durationPicker: some View {
+        Picker("Countdown", selection: $viewModel.countdownDuration) {
+            Text("5s").tag(5)
+            Text("10s").tag(10)
+        }
+        .pickerStyle(.segmented)
+        .frame(width: 140)
+        .background(.black.opacity(0.4))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
     private var recordButton: some View {
-        Button(action: viewModel.toggleRecording) {
+        Button(action: viewModel.primaryButtonTapped) {
             Circle()
                 .strokeBorder(.white, lineWidth: 4)
                 .frame(width: 76, height: 76)
@@ -57,6 +83,12 @@ struct CaptureView: View {
                         .animation(.easeInOut(duration: 0.2), value: viewModel.isRecording)
                 )
         }
-        .accessibilityLabel(viewModel.isRecording ? "Stop Recording" : "Start Recording")
+        .accessibilityLabel(accessibilityLabel)
+    }
+
+    private var accessibilityLabel: String {
+        if viewModel.isRecording { return "Stop Recording" }
+        if viewModel.secondsRemaining != nil { return "Cancel Countdown" }
+        return "Start Recording"
     }
 }

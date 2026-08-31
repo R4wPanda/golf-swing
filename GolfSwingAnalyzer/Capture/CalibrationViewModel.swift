@@ -5,6 +5,7 @@ import Foundation
 final class CalibrationViewModel: ObservableObject {
     enum Phase {
         case positioning
+        case countingDown
         case recording
         case analyzing
         case passed
@@ -12,9 +13,14 @@ final class CalibrationViewModel: ObservableObject {
     }
 
     let cameraController = CameraController()
+    private let countdown = SwingCountdown()
 
     @Published var phase: Phase = .positioning
     @Published var errorMessage: String?
+    @Published var secondsRemaining: Int?
+    @Published var countdownDuration: Int = SwingCountdownPreference.duration {
+        didSet { SwingCountdownPreference.duration = countdownDuration }
+    }
 
     private let poseExtractor: PoseProviding = VisionPoseExtractor()
     private var cancellables: Set<AnyCancellable> = []
@@ -31,8 +37,22 @@ final class CalibrationViewModel: ObservableObject {
     }
 
     func beginPracticeSwing() {
-        phase = .recording
-        cameraController.startRecording()
+        phase = .countingDown
+        countdown.start(
+            duration: countdownDuration,
+            onTick: { [weak self] value in self?.secondsRemaining = value },
+            onGo: { [weak self] in
+                self?.phase = .recording
+                self?.cameraController.startRecording()
+            },
+            onAutoStop: { [weak self] in self?.finishPracticeSwing() }
+        )
+    }
+
+    func cancelCountdown() {
+        countdown.cancel()
+        secondsRemaining = nil
+        phase = .positioning
     }
 
     func finishPracticeSwing() {

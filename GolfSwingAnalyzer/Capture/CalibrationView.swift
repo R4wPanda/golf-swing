@@ -32,8 +32,20 @@ struct CalibrationView: View {
             switch viewModel.phase {
             case .positioning:
                 Text("Do a practice swing so we can check your framing.")
+                Picker("Countdown", selection: $viewModel.countdownDuration) {
+                    Text("5s").tag(5)
+                    Text("10s").tag(10)
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 140)
                 Button("Start Practice Swing") { viewModel.beginPracticeSwing() }
                     .buttonStyle(.borderedProminent)
+            case .countingDown:
+                if let secondsRemaining = viewModel.secondsRemaining {
+                    Text("\(secondsRemaining)")
+                        .font(.system(size: 48, weight: .bold, design: .rounded))
+                }
+                Button("Cancel") { viewModel.cancelCountdown() }
             case .recording:
                 Text("Recording — do your practice swing, then tap Done.")
                 Button("Done") { viewModel.finishPracticeSwing() }
